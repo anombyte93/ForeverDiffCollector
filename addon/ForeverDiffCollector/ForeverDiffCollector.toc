@@ -1,0 +1,14 @@
+## Interface: 11509, 16001
+## Title: ForeverDiff Collector
+## Notes: Records quest text, NPC and object locations, vendors and loot for foreverdiff (opt-in upload).
+## Author: ForeverDiff
+## Version: 1.0.0
+## SavedVariables: ForeverDiffCollectorDB
+
+# The table of items ForeverDiff still needs a contribution for, written by `wfd build` and put
+# into the download zip at request time. It is data, not code: it is never committed, and a zip
+# served while the site could not fetch it simply has no such file - the client skips a listed
+# file that is not there and the addon adds no tooltip line. It is loaded FIRST so that the
+# addon's own file can read it at load.
+ForeverDiffData.lua
+ForeverDiffCollector.lua

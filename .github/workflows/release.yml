@@ -1,0 +1,46 @@
+name: Release addon
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'addon/ForeverDiffCollector/**'
+      - 'ops/build-addon.py'
+      - '.github/workflows/release.yml'
+permissions:
+  contents: write
+concurrency:
+  group: addon-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: sudo apt-get update && sudo apt-get install -y lua5.1
+      - run: bash ops/test-addon.sh
+      - run: python3 ops/build-addon.py
+      - name: Publish versioned release after merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, subprocess
+          toc = pathlib.Path('addon/ForeverDiffCollector/ForeverDiffCollector.toc').read_text()
+          version = re.search(r'^## Version: (.+)$', toc, re.M).group(1)
+          assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version), 'Use X.Y.Z for stable releases'
+          tag = 'v' + version
+          # A rerun may finish a tagged release, but must never relabel different code.
+          existing = subprocess.run(['git', 'rev-parse', '--verify', 'refs/tags/' + tag], capture_output=True, text=True)
+          head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          if existing.returncode == 0:
+              assert existing.stdout.strip() == head, 'Version already belongs to another commit; bump the TOC version'
+          else:
+              subprocess.run(['git', 'tag', tag], check=True)
+              subprocess.run(['git', 'push', 'origin', 'refs/tags/' + tag], check=True)
+          if subprocess.run(['gh', 'release', 'view', tag], capture_output=True).returncode == 0:
+              print('Release already exists; leaving published assets unchanged.')
+          else:
+              subprocess.run(['gh', 'release', 'create', tag, 'dist/ForeverDiffCollector.zip', 'dist/SHA256SUMS.txt', '--verify-tag', '--generate-notes', '--latest', '--title', 'ForeverDiff Collector ' + tag], check=True)
+          PY
