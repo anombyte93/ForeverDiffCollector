@@ -12,6 +12,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y lua5.1
       - run: bash ops/test-addon.sh
       - run: python3 ops/build-addon.py
+      - run: python3 ops/test-release-version.py
       - name: Require a new version for release changes
         if: github.event_name == 'pull_request'
         env:
